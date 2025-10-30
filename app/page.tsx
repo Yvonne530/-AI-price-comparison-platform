@@ -31,9 +31,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
+import { searchProducts, getPopularSearches, type Product } from "@/lib/api"
 
 // 扩展的国家标志映射
-const countryFlags = {
+const countryFlags: { [key: string]: string } = {
   US: "🇺🇸",
   CN: "🇨🇳",
   JP: "🇯🇵",
@@ -67,7 +68,23 @@ const countryFlags = {
 }
 
 // 扩展的国家平台数据库 (20+主流平台)
-const countryPlatforms = {
+const countryPlatforms: { 
+  [key: string]: {
+    name: string;
+    flag: string;
+    currency: string;
+    symbol: string;
+    locale: string;
+    platforms: {
+      id: string;
+      name: string;
+      tax: number;
+      rating: number;
+      logo: string;
+      category: string;
+    }[];
+  }
+} = {
   US: {
     name: "美国",
     flag: "🇺🇸",
@@ -862,7 +879,7 @@ function ProductPriceMatrix({
     if (!config) return { platform: null, value: Number.POSITIVE_INFINITY, currency: "USD", symbol: "$" }
 
     return config.platforms.reduce(
-      (min, platform) => {
+      (min: { platform: any; value: number; currency: string; symbol: string }, platform) => {
         if (!product.prices[platform.id]) return min
         const price = calculatePrice(product, platform.id, country)
         return price.total < min.value
@@ -1088,11 +1105,23 @@ function SearchResults({
   products,
   selectedCountries,
   calculatePrice,
+  isLoading,
 }: {
   products: any[]
   selectedCountries: string[]
   calculatePrice: (product: any, platformId: string, country: string) => any
+  isLoading: boolean
 }) {
+  if (isLoading) {
+    return (
+      <div className="text-center py-20">
+        <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+        <h3 className="text-xl font-semibold text-gray-900 mb-2">搜索中...</h3>
+        <p className="text-gray-600">正在为您查找全球最优价格</p>
+      </div>
+    )
+  }
+
   if (products.length === 0) {
     return (
       <div className="text-center py-20">
@@ -1133,6 +1162,8 @@ export default function GlobalPriceFinder() {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCountries, setSelectedCountries] = useState(["US", "CN", "JP"])
   const [user, setUser] = useState<any | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [searchResults, setSearchResults] = useState<Product[]>([])
 
   // 实时价格计算引擎 (升级版)
   const calculateFinalPrice = (product: any, platformId: string, country: string) => {
@@ -1169,16 +1200,31 @@ export default function GlobalPriceFinder() {
   }
 
   // 搜索过滤
-  const searchResults = useMemo(() => {
-    if (!searchQuery.trim()) return []
+  const performSearch = async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([])
+      return
+    }
 
-    return mockProducts.filter(
-      (product) =>
-        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.brand.toLowerCase().includes(searchQuery.toLowerCase()),
-    )
+    setIsLoading(true)
+    try {
+      const result = await searchProducts(query)
+      setSearchResults(result.results)
+    } catch (error) {
+      console.error("Search failed:", error)
+      setSearchResults([])
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // 监听搜索查询变化
+  useMemo(() => {
+    const delayDebounceFn = setTimeout(() => {
+      performSearch(searchQuery)
+    }, 500)
+
+    return () => clearTimeout(delayDebounceFn)
   }, [searchQuery])
 
   const availableCountries = Object.keys(countryPlatforms)
@@ -1226,6 +1272,7 @@ export default function GlobalPriceFinder() {
               products={searchResults}
               selectedCountries={selectedCountries}
               calculatePrice={calculateFinalPrice}
+              isLoading={isLoading}
             />
           ) : (
             <div className="text-center py-20">

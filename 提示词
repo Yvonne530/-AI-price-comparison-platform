@@ -1,0 +1,1376 @@
+
+
+2. 创建支付/结账会话
+
+POST /api/subscription/checkout
+
+请求体
+{
+  "planId": "plan_pro",
+  "paymentMethod": "stripe",  // 或 paypal
+  "successUrl": "https://example.com/success",
+  "cancelUrl": "https://example.com/cancel"
+}
+
+返回示例
+{
+  "success": true,
+  "data": {
+    "checkoutUrl": "https://stripe.com/checkout/session/xyz123"
+  }
+}
+
+实现说明
+
+使用 Stripe/PayPal SDK 创建会话
+
+会话中包含金额、货币、订阅计划 ID
+
+返回前端跳转 URL，用于完成支付
+
+需验证用户身份 (JWT)
+
+3. 获取用户订阅状态
+
+GET /api/subscription/status
+
+返回示例
+{
+  "success": true,
+  "data": {
+    "userId": "user123",
+    "currentPlan": "plan_pro",
+    "status": "active",
+    "expiryDate": "2026-10-30T23:59:59Z"
+  }
+}
+
+说明
+
+status: active / inactive / expired
+
+用于前端显示订阅状态和功能权限控制
+
+4. Webhook 接收支付状态更新
+
+POST /api/subscription/webhook
+
+功能
+
+接收支付服务（Stripe/PayPal）异步通知
+
+更新用户订阅状态和有效期
+
+示例事件
+{
+  "eventType": "payment_success",
+  "userId": "user123",
+  "planId": "plan_pro",
+  "paymentId": "pay_xyz123",
+  "amount": 29.9,
+  "currency": "CNY",
+  "timestamp": "2025-10-30T08:00:00Z"
+}
+
+实现细节
+
+验证 webhook 签名确保来源合法
+
+更新用户订阅状态和到期时间
+
+记录支付流水，防止重复处理
+
+5. 安全与真实可用性要求
+
+真实支付集成：必须使用 Stripe/PayPal SDK，而非硬编码 URL
+
+权限控制：用户仅能查询或操作自己的订阅
+
+统一错误格式：
+
+{ "success": false, "error": "订阅计划不存在或支付失败" }
+
+
+速率限制：支付接口需限制频率，防止滥用
+
+这是 第7部分：支付与订阅管理模块 的完整 AI 后端提示词，保持真实可用标准并避免 AI 幻觉。
+AI 后端提示词文档（第8部分）：博客、帮助文档与内容管理模块
+模块说明
+
+该模块负责管理博客文章、帮助文档、FAQ 和分类信息，支持前端内容展示与检索。
+
+数据库使用 PostgreSQL + Prisma ORM 或 MongoDB + Mongoose
+
+支持分页、过滤和排序
+
+后端提供 RESTful API
+
+1. 获取博客文章列表
+
+GET /api/blog/posts
+
+功能
+
+返回所有博客文章或根据查询条件筛选
+
+支持分页、排序、分类过滤
+
+查询参数
+
+page (默认 1)
+
+limit (默认 10)
+
+category (可选，按分类筛选)
+
+sortBy (可选，createdAt/views)
+
+order (可选，asc/desc)
+
+返回示例
+{
+  "success": true,
+  "data": {
+    "posts": [
+      {
+        "id": "post001",
+        "title": "跨境电商套利指南",
+        "summary": "教你如何利用平台价格差异赚钱",
+        "author": "Admin",
+        "category": "攻略",
+        "createdAt": "2025-10-01T12:00:00Z",
+        "views": 1024
+      }
+    ],
+    "page": 1,
+    "totalPages": 5
+  }
+}
+
+2. 获取单篇博客文章
+
+GET /api/blog/posts/{id}
+
+返回示例
+{
+  "success": true,
+  "data": {
+    "id": "post001",
+    "title": "跨境电商套利指南",
+    "content": "<p>文章完整内容</p>",
+    "author": "Admin",
+    "category": "攻略",
+    "createdAt": "2025-10-01T12:00:00Z",
+    "updatedAt": "2025-10-05T08:00:00Z",
+    "views": 1024
+  }
+}
+
+3. 获取博客分类列表
+
+GET /api/blog/categories
+
+返回示例
+{
+  "success": true,
+  "data": [
+    { "id": "cat001", "name": "攻略" },
+    { "id": "cat002", "name": "市场动态" },
+    { "id": "cat003", "name": "新闻资讯" }
+  ]
+}
+
+4. 获取帮助文档或FAQ列表
+
+GET /api/help/articles
+
+功能
+
+返回帮助文章
+
+支持分页、分类过滤
+
+查询参数
+
+page, limit, category
+
+可选 search (关键词搜索)
+
+返回示例
+{
+  "success": true,
+  "data": {
+    "articles": [
+      {
+        "id": "faq001",
+        "title": "如何创建套利提醒？",
+        "summary": "在个人中心中设置价格提醒...",
+        "category": "功能使用",
+        "createdAt": "2025-09-01T10:00:00Z"
+      }
+    ],
+    "page": 1,
+    "totalPages": 3
+  }
+}
+
+5. 获取单篇帮助文档
+
+GET /api/help/articles/{id}
+
+返回示例
+{
+  "success": true,
+  "data": {
+    "id": "faq001",
+    "title": "如何创建套利提醒？",
+    "content": "<p>详细步骤说明...</p>",
+    "category": "功能使用",
+    "createdAt": "2025-09-01T10:00:00Z",
+    "updatedAt": "2025-09-10T08:00:00Z"
+  }
+}
+
+6. 安全与真实可用性要求
+
+真实数据存储：博客和帮助文档存储在数据库，前端动态获取，避免硬编码
+
+分页与排序：避免一次返回大量数据，确保性能
+
+统一错误格式：
+
+{ "success": false, "error": "文章不存在或获取失败" }
+
+
+权限控制：普通用户可读，管理员可管理/更新内容
+AI 后端提示词文档（第9部分）：国家与平台信息模块
+模块说明
+
+该模块用于管理和提供各国家及其支持的电商平台信息，供前端进行价格对比、平台筛选和国家选择。
+
+数据库使用 PostgreSQL + Prisma ORM 或 MongoDB + Mongoose
+
+提供 RESTful API，支持分页、过滤、排序
+
+1. 获取支持的国家列表
+
+GET /api/countries
+
+功能
+
+返回系统支持的所有国家信息
+
+前端用于国家选择下拉框、搜索和筛选
+
+返回示例
+{
+  "success": true,
+  "data": [
+    { "id": "cn", "name": "中国", "currency": "CNY" },
+    { "id": "us", "name": "美国", "currency": "USD" },
+    { "id": "jp", "name": "日本", "currency": "JPY" }
+  ]
+}
+
+2. 获取支持的电商平台列表
+
+GET /api/platforms
+
+功能
+
+返回所有支持的平台信息
+
+支持按国家筛选
+
+查询参数
+
+countryId (可选，根据国家过滤平台)
+
+page, limit (分页参数)
+
+返回示例
+{
+  "success": true,
+  "data": [
+    { "id": "amazon_us", "name": "Amazon", "countryId": "us", "url": "https://www.amazon.com" },
+    { "id": "taobao_cn", "name": "淘宝", "countryId": "cn", "url": "https://www.taobao.com" },
+    { "id": "rakuten_jp", "name": "Rakuten", "countryId": "jp", "url": "https://www.rakuten.co.jp" }
+  ]
+}
+
+3. 获取单个平台信息
+
+GET /api/platforms/{id}
+
+返回示例
+{
+  "success": true,
+  "data": {
+    "id": "amazon_us",
+    "name": "Amazon",
+    "countryId": "us",
+    "url": "https://www.amazon.com",
+    "currency": "USD",
+    "logoUrl": "https://cdn.example.com/platforms/amazon_us.png",
+    "description": "全球知名电商平台，提供各类商品价格对比。"
+  }
+}
+
+4. 安全与真实可用性要求
+
+真实数据存储：国家和平台信息存储在数据库，前端动态获取
+
+分页与过滤：支持国家过滤，避免一次性返回大量平台信息
+
+统一错误格式：
+
+{ "success": false, "error": "平台不存在或获取失败" }
+
+
+只读访问：普通用户可访问，无需登录；管理员可增删改平台信息
+AI 后端提示词文档（第10部分）：订阅与支付模块
+模块说明
+
+该模块用于管理用户订阅计划、支付流程以及订阅状态查询。
+
+数据库使用 PostgreSQL + Prisma ORM 或 MongoDB + Mongoose
+
+支付集成：推荐 Stripe（或 PayPal）
+
+提供 RESTful API，支持前端订阅选择、付款、状态查询
+
+1. 获取可用订阅计划
+
+GET /api/subscription/plans
+
+功能
+
+返回系统支持的所有订阅计划
+
+前端用于订阅选择和展示价格
+
+返回示例
+{
+  "success": true,
+  "data": [
+    { "id": "free", "name": "免费版", "price": 0, "features": ["基础搜索", "价格对比"], "duration": "永久" },
+    { "id": "pro", "name": "专业版", "price": 9.99, "features": ["高级搜索", "套利机会分析", "价格提醒"], "duration": "月" },
+    { "id": "enterprise", "name": "企业版", "price": 49.99, "features": ["API访问", "批量导出", "高级分析"], "duration": "月" }
+  ]
+}
+
+2. 创建结账会话
+
+POST /api/subscription/checkout
+
+请求体
+{
+  "userId": "用户ID",
+  "planId": "pro",
+  "paymentMethod": "stripe"
+}
+
+功能
+
+创建支付会话并返回支付链接
+
+集成 Stripe Checkout 或 PayPal
+
+确保金额、币种和用户订阅计划正确
+
+返回示例
+{
+  "success": true,
+  "data": {
+    "checkoutUrl": "https://checkout.stripe.com/pay/cs_test_XXXXXXXX"
+  }
+}
+
+3. 获取用户订阅状态
+
+GET /api/subscription/status
+
+查询参数
+
+userId（必填）
+
+返回示例
+{
+  "success": true,
+  "data": {
+    "planId": "pro",
+    "status": "active",
+    "startDate": "2025-10-30T10:00:00Z",
+    "endDate": "2025-11-30T10:00:00Z",
+    "features": ["高级搜索", "套利机会分析", "价格提醒"]
+  }
+}
+
+4. 安全与真实可用性要求
+
+真实数据存储：用户订阅信息存储在数据库中
+
+支付验证：通过 Stripe/PayPal webhook 回调验证支付状态
+
+统一错误格式：
+
+{ "success": false, "error": "订阅状态获取失败" }
+
+
+权限控制：用户只能查询自己的订阅状态，管理员可查询所有用户订阅
+AI 后端提示词文档（第11部分）：博客/内容管理模块
+模块说明
+
+该模块用于管理博客文章、帮助中心内容及分类信息。
+
+数据库：PostgreSQL + Prisma ORM 或 MongoDB + Mongoose
+
+提供 RESTful API，支持前端展示文章、分类、搜索和详情
+
+支持管理员新增/修改/删除内容，普通用户仅可查看
+
+1. 获取文章列表
+
+GET /api/blog/posts
+
+查询参数
+
+page（可选，默认1）
+
+limit（可选，默认10）
+
+category（可选，按分类筛选）
+
+search（可选，按标题或内容搜索）
+
+返回示例
+{
+  "success": true,
+  "data": {
+    "posts": [
+      { "id": "1", "title": "跨境购物技巧", "summary": "教你如何找到最低价格...", "category": "购物指南", "createdAt": "2025-10-01T10:00:00Z" },
+      { "id": "2", "title": "AI套利分析介绍", "summary": "如何利用AI进行价格套利...", "category": "工具教程", "createdAt": "2025-10-10T10:00:00Z" }
+    ],
+    "pagination": { "page": 1, "limit": 10, "total": 25 }
+  }
+}
+
+2. 获取单篇文章
+
+GET /api/blog/posts/{id}
+
+返回示例
+{
+  "success": true,
+  "data": {
+    "id": "1",
+    "title": "跨境购物技巧",
+    "content": "<p>详细内容...</p>",
+    "category": "购物指南",
+    "author": "Admin",
+    "createdAt": "2025-10-01T10:00:00Z",
+    "updatedAt": "2025-10-02T12:00:00Z"
+  }
+}
+
+3. 获取博客分类
+
+GET /api/blog/categories
+
+返回示例
+{
+  "success": true,
+  "data": [
+    { "id": "shopping", "name": "购物指南" },
+    { "id": "tutorial", "name": "工具教程" },
+    { "id": "news", "name": "行业资讯" }
+  ]
+}
+
+4. 获取帮助文章
+
+GET /api/help/articles
+
+查询参数
+
+page（可选，默认1）
+
+limit（可选，默认10）
+
+search（可选，按标题或内容搜索）
+
+返回示例
+{
+  "success": true,
+  "data": {
+    "articles": [
+      { "id": "101", "title": "如何重置密码", "summary": "忘记密码时的操作指南...", "createdAt": "2025-09-20T10:00:00Z" },
+      { "id": "102", "title": "订阅升级步骤", "summary": "从免费版升级到专业版...", "createdAt": "2025-09-25T10:00:00Z" }
+    ],
+    "pagination": { "page": 1, "limit": 10, "total": 15 }
+  }
+}
+
+5. 获取单篇帮助文章
+
+GET /api/help/articles/{id}
+
+返回示例
+{
+  "success": true,
+  "data": {
+    "id": "101",
+    "title": "如何重置密码",
+    "content": "<p>详细操作步骤...</p>",
+    "createdAt": "2025-09-20T10:00:00Z",
+    "updatedAt": "2025-09-21T12:00:00Z"
+  }
+}
+
+6. 安全与真实可用性要求
+
+真实数据存储：所有文章和帮助内容存储在数据库中
+
+权限控制：
+
+普通用户：仅可 GET 文章和帮助内容
+
+管理员：可 POST / PUT / DELETE 内容
+
+分页、过滤、搜索：所有列表接口均支持分页和搜索
+
+统一错误格式：
+
+{ "success": false, "error": "文章获取失败" }
+
+
+CORS 和安全：允许前端跨域请求，防止未授权访问
+
+这份提示词保证了：
+
+数据真实存储，非硬编码
+
+权限控制和分页筛选可用
+
+接口格式与前端一致，便于直接生成可用后端
+AI 后端提示词文档（第12部分）：国家与平台信息模块
+模块说明
+
+该模块用于管理支持的国家和电商平台信息，供前端价格对比和套利分析使用。
+
+数据库：PostgreSQL + Prisma ORM 或 MongoDB + Mongoose
+
+提供 RESTful API，支持前端展示国家、平台信息，以及单个平台或国家的详细数据
+
+1. 获取支持的国家列表
+
+GET /api/countries
+
+返回示例
+{
+  "success": true,
+  "data": [
+    { "id": "us", "name": "美国", "currency": "USD", "exchangeRateToCNY": 7.2 },
+    { "id": "cn", "name": "中国", "currency": "CNY", "exchangeRateToCNY": 1 },
+    { "id": "jp", "name": "日本", "currency": "JPY", "exchangeRateToCNY": 0.052 }
+  ]
+}
+
+2. 获取支持的平台列表
+
+GET /api/platforms
+
+返回示例
+{
+  "success": true,
+  "data": [
+    { "id": "amazon", "name": "Amazon", "country": "us", "url": "https://www.amazon.com" },
+    { "id": "taobao", "name": "淘宝", "country": "cn", "url": "https://www.taobao.com" },
+    { "id": "rakuten", "name": "Rakuten", "country": "jp", "url": "https://www.rakuten.co.jp" }
+  ]
+}
+
+3. 获取单个平台信息
+
+GET /api/platforms/{id}
+
+返回示例
+{
+  "success": true,
+  "data": {
+    "id": "amazon",
+    "name": "Amazon",
+    "country": "us",
+    "url": "https://www.amazon.com",
+    "supportedCategories": ["Electronics", "Books", "Toys"],
+    "currency": "USD",
+    "shippingFeeRules": { "standard": 5, "express": 15 }
+  }
+}
+
+4. 获取单个国家信息
+
+GET /api/countries/{id}
+
+返回示例
+{
+  "success": true,
+  "data": {
+    "id": "us",
+    "name": "美国",
+    "currency": "USD",
+    "exchangeRateToCNY": 7.2,
+    "taxRate": 0.07,
+    "supportedPlatforms": ["amazon", "ebay", "walmart"]
+  }
+}
+
+5. 安全与真实可用性要求
+
+真实数据存储：所有国家和平台信息存储在数据库中
+
+只读接口：普通用户可访问所有接口，管理员可维护数据（新增、修改、删除）
+
+分页、过滤、搜索：列表接口支持按国家/平台名称筛选
+
+统一错误格式：
+
+{ "success": false, "error": "平台信息获取失败" }
+
+
+CORS 和安全：允许前端跨域请求，防止未授权访问
+
+这份提示词保证了：
+
+数据真实存储，非硬编码
+
+支持多国家、多平台信息的完整查询
+
+接口格式与前端需求一致，可直接生成可用后端
+AI 后端提示词文档（第13部分）：订阅与支付模块
+模块说明
+
+该模块用于管理用户订阅计划和支付流程，支持前端展示订阅信息、创建支付会话和查询订阅状态。
+
+数据库：PostgreSQL + Prisma ORM 或 MongoDB + Mongoose
+
+外部集成：支付网关（Stripe / PayPal）
+
+接口遵循 RESTful 风格，支持真实数据存储与校验
+
+1. 获取可用订阅计划
+
+GET /api/subscription/plans
+
+返回示例
+{
+  "success": true,
+  "data": [
+    { "id": "free", "name": "免费版", "price": 0, "duration": "无限", "features": ["基础搜索", "价格对比"] },
+    { "id": "pro", "name": "专业版", "price": 29.99, "duration": "月", "features": ["高级搜索", "套利分析", "价格提醒"] },
+    { "id": "enterprise", "name": "企业版", "price": 299.99, "duration": "年", "features": ["全功能访问", "API权限", "企业支持"] }
+  ]
+}
+
+2. 创建支付会话
+
+POST /api/subscription/checkout
+
+请求示例
+{
+  "userId": "user-id-123",
+  "planId": "pro",
+  "paymentMethod": "stripe"
+}
+
+实现细节
+
+校验用户身份和订阅计划有效性
+
+调用支付网关创建支付会话（Stripe Checkout / PayPal Order）
+
+将支付会话信息存储在数据库，用于后续确认
+
+返回前端可用的支付链接或会话 ID
+
+返回示例
+{
+  "success": true,
+  "data": {
+    "checkoutUrl": "https://checkout.stripe.com/pay/cs_test_123",
+    "sessionId": "cs_test_123"
+  }
+}
+
+3. 查询用户订阅状态
+
+GET /api/subscription/status?userId={userId}
+
+返回示例
+{
+  "success": true,
+  "data": {
+    "userId": "user-id-123",
+    "planId": "pro",
+    "planName": "专业版",
+    "status": "active",
+    "expiresAt": "2025-12-31T23:59:59Z",
+    "features": ["高级搜索", "套利分析", "价格提醒"]
+  }
+}
+
+4. 安全与可用性要求
+
+真实数据存储：订阅计划、支付状态、到期时间存储在数据库中
+
+支付网关集成：实际调用 Stripe / PayPal API，不使用硬编码价格或假链接
+
+鉴权：仅认证用户可查询或创建支付
+
+Webhook 支持：用于接收支付成功/失败通知，更新用户订阅状态
+
+统一错误格式：
+
+{ "success": false, "error": "支付创建失败" }
+
+
+速率限制：防止用户重复创建支付请求
+
+这份提示词保证：
+
+数据真实可用，非硬编码
+
+支付流程可直接集成 Stripe/PayPal
+
+接口设计与前端需求一致
+AI 后端提示词文档（第14部分）：错误处理与统一响应模块
+模块说明
+
+该模块用于标准化所有 API 的响应格式和错误处理，确保前端能够统一解析数据，同时便于日志记录和调试。
+
+数据库或业务逻辑错误都会通过统一接口返回
+
+支持国际化错误消息，可根据前端需求返回中文或英文
+
+1. 统一响应格式
+成功响应
+{
+  "success": true,
+  "data": { /* 具体业务数据 */ }
+}
+
+错误响应
+{
+  "success": false,
+  "error": {
+    "code": "USER_NOT_FOUND",      // 错误代码
+    "message": "用户不存在",       // 中文提示，可多语言支持
+    "details": { /* 可选，具体错误信息 */ }
+  }
+}
+
+示例：
+
+用户未登录访问受保护路由：
+
+{
+  "success": false,
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "未授权访问，请登录",
+    "details": {}
+  }
+}
+
+
+产品 ID 不存在：
+
+{
+  "success": false,
+  "error": {
+    "code": "PRODUCT_NOT_FOUND",
+    "message": "未找到对应产品",
+    "details": { "productId": "abc123" }
+  }
+}
+
+2. 实现细节
+
+全局中间件捕获错误：
+
+Express.js 使用 app.use((err, req, res, next) => {...})
+
+Prisma 或 Mongoose 的数据库错误统一格式化
+
+外部 API 调用失败也返回统一结构
+
+错误分类：
+
+400 Bad Request：请求参数校验失败
+
+401 Unauthorized：未登录或 JWT 过期
+
+403 Forbidden：权限不足
+
+404 Not Found：资源不存在
+
+500 Internal Server Error：服务器异常
+
+日志记录：
+
+将错误写入日志文件或远程日志服务（如 Sentry）
+
+包含时间、用户 ID、请求 URL、堆栈信息
+
+多语言支持：
+
+根据前端 Accept-Language Header 返回中文或英文
+
+可扩展为 JSON 文件维护错误码对应语言
+
+安全考虑：
+
+不暴露数据库结构或堆栈信息给前端
+
+返回信息只包含必要错误描述
+
+3. 速率限制与防滥用
+
+对高频接口（如登录、搜索、支付创建）统一返回：
+
+{
+  "success": false,
+  "error": {
+    "code": "RATE_LIMIT_EXCEEDED",
+    "message": "请求过于频繁，请稍后重试"
+  }
+}
+
+
+避免前端误操作导致服务不可用
+
+4. 使用示例
+// Express.js 全局错误处理中间件示例
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(err.status || 500).json({
+    success: false,
+    error: {
+      code: err.code || 'INTERNAL_SERVER_ERROR',
+      message: err.message || '服务器内部错误',
+      details: err.details || {}
+    }
+  });
+});
+
+
+这份提示词保证：
+
+真实可用：全局中间件捕获实际错误，非硬编码
+
+统一接口：前端统一解析数据和错误
+
+安全可靠：不泄露敏感信息
+
+多语言可扩展：可按需求返回中文或英文
+AI 后端提示词文档（第15部分）：WebSocket 与实时通知模块
+模块说明
+
+该模块用于支持前端实时通知功能，包括：
+
+价格提醒：当产品价格达到用户设定阈值时触发
+
+套利机会通知：当发现新的套利机会时通知用户
+
+系统公告：平台消息、维护通知等
+
+技术栈：Node.js + Express + WebSocket (ws 库)
+
+1. WebSocket 服务器初始化
+import { WebSocketServer } from 'ws';
+import jwt from 'jsonwebtoken';
+import { verifyToken } from './auth';
+
+const wss = new WebSocketServer({ noServer: true });
+
+wss.on('connection', (ws, request, user) => {
+  console.log(`用户 ${user.id} 已连接 WebSocket`);
+  
+  ws.on('message', (message) => {
+    try {
+      const data = JSON.parse(message.toString());
+      handleClientMessage(user, ws, data);
+    } catch (err) {
+      ws.send(JSON.stringify({
+        success: false,
+        error: { code: 'INVALID_MESSAGE', message: '无效消息格式' }
+      }));
+    }
+  });
+
+  ws.on('close', () => {
+    console.log(`用户 ${user.id} 已断开连接`);
+  });
+});
+
+// 验证 JWT 并升级 HTTP 连接为 WebSocket
+function upgradeWebSocket(server) {
+  server.on('upgrade', (request, socket, head) => {
+    const token = request.headers['sec-websocket-protocol'];
+    if (!token) {
+      socket.destroy();
+      return;
+    }
+
+    try {
+      const user = verifyToken(token as string);
+      wss.handleUpgrade(request, socket, head, (ws) => {
+        wss.emit('connection', ws, request, user);
+      });
+    } catch {
+      socket.destroy();
+    }
+  });
+}
+
+export { wss, upgradeWebSocket };
+
+2. 消息类型定义
+客户端发送
+interface ClientMessage {
+  type: 'SUBSCRIBE_ALERTS' | 'UNSUBSCRIBE_ALERTS';
+  payload: {
+    alertIds?: string[]; // 用户选择订阅的提醒 ID
+  }
+}
+
+服务器发送
+interface ServerMessage {
+  type: 'PRICE_ALERT' | 'ARBITRAGE_ALERT' | 'SYSTEM_ANNOUNCEMENT';
+  data: any;
+}
+
+3. 功能实现说明
+3.1 价格提醒
+
+监听数据库价格变化（可通过定时任务或触发器）
+
+当价格满足用户设定阈值时：
+
+const message: ServerMessage = {
+  type: 'PRICE_ALERT',
+  data: {
+    productId: 'abc123',
+    oldPrice: 100,
+    newPrice: 89,
+    message: '产品价格已低于您设定的阈值'
+  }
+};
+userWs.send(JSON.stringify(message));
+
+3.2 套利机会通知
+
+定期扫描产品价格差异
+
+当利润率大于阈值时触发：
+
+const message: ServerMessage = {
+  type: 'ARBITRAGE_ALERT',
+  data: {
+    productId: 'abc123',
+    profitRate: 12.5,
+    sourcePlatform: 'Amazon',
+    targetPlatform: 'eBay'
+  }
+};
+userWs.send(JSON.stringify(message));
+
+3.3 系统公告
+
+管理员推送公告或维护信息：
+
+const message: ServerMessage = {
+  type: 'SYSTEM_ANNOUNCEMENT',
+  data: {
+    title: '系统维护通知',
+    content: '平台将于今晚 12 点进行维护，预计 2 小时完成'
+  }
+};
+wss.clients.forEach(client => client.send(JSON.stringify(message)));
+
+4. 安全与稳定性
+
+认证：每个 WebSocket 连接需通过 JWT 验证
+
+消息格式校验：避免客户端发送恶意数据
+
+断线重连：前端可实现自动重连机制
+
+速率限制：避免高频推送导致前端阻塞
+
+日志：记录每个事件发送情况，便于排查问题
+
+5. 使用示例
+服务器端发送价格提醒
+function notifyPriceAlert(userId: string, alertData: any) {
+  const userWs = getUserWebSocket(userId);
+  if (userWs && userWs.readyState === WebSocket.OPEN) {
+    userWs.send(JSON.stringify({
+      type: 'PRICE_ALERT',
+      data: alertData
+    }));
+  }
+}
+
+前端示例
+const ws = new WebSocket('wss://example.com', token);
+ws.onmessage = (event) => {
+  const msg = JSON.parse(event.data);
+  if (msg.type === 'PRICE_ALERT') {
+    alert(msg.data.message);
+  }
+};
+
+
+这份提示词保证：
+
+真实可用：使用 WebSocket 服务端 + JWT 验证 + 数据库监听
+
+安全可靠：验证、速率限制、格式校验、防止幻觉生成硬编码数据
+
+可扩展：可加入更多类型通知，如订阅商品变动、库存提醒等
+第16部分：定时任务与数据抓取模块 AI提示词
+
+目标：设计一个模块，用于定时抓取各大电商平台的商品价格、库存信息，并更新到 PostgreSQL 数据库（通过 Prisma ORM），保证数据实时性和可用性。
+
+提示词示例
+创建一个 Node.js 后端模块，用于定时抓取各大电商平台的商品价格数据并写入数据库：
+
+1. 框架与库：
+   - 使用 Node.js + Express
+   - 使用 Prisma ORM 连接 PostgreSQL
+   - 使用 axios 或 node-fetch 发送 HTTP 请求
+   - 使用 node-cron 或 Agenda 实现定时任务
+
+2. 功能要求：
+   - 定时抓取商品价格和库存信息（每5分钟一次，时间可配置）
+   - 支持多个平台，例如 Amazon、JD、淘宝等
+   - 对抓取结果进行数据校验（非空、价格为正数）
+   - 遇到网络错误或接口异常时自动重试（最多3次）
+   - 将数据写入数据库：
+     - 更新已有商品的价格历史记录
+     - 新商品自动添加到 Product 表
+   - 日志记录：
+     - 抓取开始/结束时间
+     - 成功抓取条数
+     - 失败条数及原因
+
+3. 数据库模型：
+   - 使用现有 Product、Price 表
+   - Price 表记录历史价格
+   - Product 表保存商品基础信息（name、brand、category、imageUrl 等）
+
+4. 配置：
+   - 支持通过环境变量配置抓取平台的 API Key 或请求头
+   - 定时任务可通过环境变量修改抓取间隔
+
+5. 输出：
+   - 日志打印抓取情况
+   - 返回 JSON 格式统计信息供管理员查看
+
+6. 安全与性能：
+   - 限制抓取并发请求数，避免被封禁
+   - 对数据库操作使用事务，保证数据一致性
+   - 避免硬编码价格和商品数据，必须真实从平台接口或模拟接口抓取
+
+
+这个提示词的特点：
+
+避免 AI 幻觉：没有生成虚假的硬编码数据，所有数据都通过 API 或抓取逻辑获取。
+
+可用性高：直接对接 Prisma ORM 与 PostgreSQL，支持定时更新和历史价格记录。
+
+可扩展性：平台列表、抓取间隔、API Key 都通过环境变量配置。
+第17部分：套利分析与计算模块 AI提示词
+
+目标：设计一个模块，基于抓取到的跨平台价格数据，计算商品的套利机会，生成可供前端展示的套利列表。
+
+提示词示例
+创建一个 Node.js 后端模块，用于计算跨平台套利机会：
+
+1. 框架与库：
+   - Node.js + Express
+   - Prisma ORM 连接 PostgreSQL
+   - 可选：Big.js 进行精确浮点数计算
+
+2. 功能要求：
+   - 定期扫描数据库中最新商品价格数据
+   - 对每个商品计算不同平台之间的价格差：
+     - 考虑平台售价、运费、税费、关税
+     - 考虑汇率转换（从 Currency 表或实时汇率 API 获取）
+   - 计算以下指标：
+     - 绝对利润 = 目标平台售价 - 原平台售价 - 费用
+     - 利润率 = 绝对利润 / 原平台售价 * 100%
+   - 过滤条件：
+     - 最低利润率阈值（可通过环境变量或配置文件设置）
+     - 库存可用（source/target 平台必须有库存）
+   - 将符合条件的套利机会写入 ArbitrageOpportunity 表：
+     - 字段：productId, productName, sourceCountry, targetCountry, sourcePlatform, targetPlatform, sourcePrice, targetPrice, absoluteProfit, profitRate
+   - 支持分页查询和按利润率排序
+
+3. 配置：
+   - 利润率阈值可通过环境变量修改
+   - 汇率数据可定期更新
+   - 支持通过参数控制扫描范围（全部商品或新增/更新商品）
+
+4. 输出：
+   - JSON 格式返回前端所需的套利列表
+   - 包含分页信息：totalItems, page, limit, items[]
+
+5. 安全与性能：
+   - 使用数据库索引优化查询
+   - 对大数据量计算使用批处理（batch processing）
+   - 避免硬编码价格，所有数据都来自数据库或实时接口
+   - 错误处理：网络失败、汇率接口异常、数据库异常，返回标准 JSON 错误格式
+
+6. 接口示例：
+   - GET /api/arbitrage/opportunities?page=1&limit=20&minProfitRate=10
+   - 返回 JSON:
+   {
+     "success": true,
+     "data": {
+       "totalItems": 125,
+       "page": 1,
+       "limit": 20,
+       "items": [
+         {
+           "productId": "abc123",
+           "productName": "Example Product",
+           "sourceCountry": "US",
+           "targetCountry": "CN",
+           "sourcePlatform": "Amazon",
+           "targetPlatform": "JD",
+           "sourcePrice": 100,
+           "targetPrice": 150,
+           "absoluteProfit": 40,
+           "profitRate": 40
+         }
+       ]
+     }
+   }
+
+
+特点说明：
+
+数据全部来自数据库或外部接口，避免硬编码和虚假数据
+
+支持批量处理和分页，性能可控
+
+可配置利润率阈值，方便灵活调整
+
+输出格式标准化，直接供前端消费
+第18部分：支付与订阅管理模块 AI提示词
+
+目标：设计后端模块，实现订阅计划展示、支付流程管理、订阅状态更新及权限控制。
+
+提示词示例
+创建一个 Node.js + Express 后端模块，用于处理订阅与支付功能：
+
+1. 技术栈：
+   - Node.js + Express
+   - Prisma ORM 连接 PostgreSQL
+   - Stripe SDK（或 PayPal SDK）处理支付
+   - JWT 认证确保用户身份
+
+2. 数据模型：
+   - SubscriptionPlan 表：
+     - id, name, description, price, currency, durationDays, features
+   - UserSubscription 表：
+     - id, userId, subscriptionPlanId, startDate, endDate, status（active/inactive/canceled）, paymentId
+   - PaymentRecord 表：
+     - id, userId, subscriptionPlanId, amount, currency, paymentMethod, status, createdAt
+
+3. 功能要求：
+   - 获取订阅计划：
+     - GET /api/subscription/plans
+     - 返回所有可用计划及特性说明
+   - 创建支付会话：
+     - POST /api/subscription/checkout
+     - 接收用户选择的 planId
+     - 调用 Stripe/PayPal 创建支付会话
+     - 返回 sessionId 或支付链接给前端
+   - 支付回调处理：
+     - POST /api/subscription/webhook
+     - Stripe/PayPal webhook 通知支付状态
+     - 更新 UserSubscription 和 PaymentRecord
+   - 查询用户订阅状态：
+     - GET /api/subscription/status
+     - 返回用户当前有效订阅及过期时间
+   - 自动权限控制：
+     - 根据用户订阅状态限制特定 API 或功能访问
+   - 支持取消订阅与续订逻辑：
+     - PUT /api/subscription/cancel
+     - 用户取消后设置 endDate，保持当前有效期
+
+4. 安全与性能：
+   - 所有端点必须 JWT 认证
+   - Webhook 需验证签名以防伪造
+   - 支付金额与计划信息从数据库获取，避免硬编码
+   - 错误处理：支付失败、Webhook 验证失败、数据库异常
+
+5. 返回格式：
+   - 统一 JSON 响应：
+   ```json
+   {
+     "success": true,
+     "data": { ... },
+     "error": null
+   }
+
+
+示例：
+
+获取计划：
+GET /api/subscription/plans
+返回：
+
+{
+  "success": true,
+  "data": [
+    { "id": "plan1", "name": "PRO", "price": 29.99, "currency": "USD", "durationDays": 30, "features": ["高级搜索","套利分析"] }
+  ]
+}
+
+
+查询用户订阅：
+GET /api/subscription/status
+返回：
+
+{
+  "success": true,
+  "data": { "plan": "PRO", "status": "active", "expiresAt": "2025-11-30T23:59:59Z" }
+}
+
+
+---
+
+**特点说明**：
+
+- 数据来源全部真实，避免硬编码  
+- 支持 Stripe/PayPal 实际支付流程  
+- Webhook 验证安全，保证支付真实性  
+- 订阅状态与权限控制直接对应前端功能  
+
+---
+第19部分：通知与消息中心模块 AI提示词
+
+目标：设计后端模块，实现用户通知、消息中心、实时提醒和订阅提醒功能。
+
+提示词示例
+创建一个 Node.js + Express 后端模块，用于处理用户通知与消息中心：
+
+1. 技术栈：
+   - Node.js + Express
+   - Prisma ORM + PostgreSQL
+   - WebSocket 或 Socket.io 实现实时通知
+   - JWT 认证确保用户身份
+
+2. 数据模型：
+   - Notification 表：
+     - id, userId, type（price_alert/arbitrage_alert/system_alert）、title, message, read（boolean）, createdAt
+   - PriceAlert 表：
+     - id, userId, productId, thresholdPrice, alertType（below/above）, isActive
+   - ArbitrageAlert 表：
+     - id, userId, opportunityId, isActive, createdAt
+   - 关联关系：
+     - User 1:N Notification
+     - User 1:N PriceAlert
+     - User 1:N ArbitrageAlert
+
+3. 功能要求：
+   - 获取通知列表：
+     - GET /api/notifications?page=&limit=
+     - 支持分页、按类型过滤、按时间排序
+   - 标记通知已读：
+     - PUT /api/notifications/{id}/read
+     - 设置 read = true
+   - 创建价格提醒：
+     - POST /api/alerts
+     - 接收 userId, productId, thresholdPrice, alertType
+     - 保存到 PriceAlert 表
+   - 更新价格提醒：
+     - PUT /api/alerts/{id}
+   - 删除价格提醒：
+     - DELETE /api/alerts/{id}
+   - 获取用户所有提醒：
+     - GET /api/alerts
+   - 触发通知：
+     - 当价格低于/高于阈值时，创建 Notification 并通过 WebSocket 推送
+     - 当新的套利机会出现时，创建 Notification 并推送
+   - WebSocket 实时推送：
+     - 用户登录后建立 WebSocket 连接
+     - 新通知通过事件推送给客户端
+   - 后台系统发送通知：
+     - 管理员可发送全局或单用户通知
+
+4. 安全与性能：
+   - 所有端点必须 JWT 认证
+   - 防止滥用：速率限制每用户每分钟创建通知次数
+   - 数据库索引：
+     - Notification(userId, read)
+     - PriceAlert(userId, isActive)
+     - ArbitrageAlert(userId, isActive)
+
+5. 返回格式：
+   - 统一 JSON 响应：
+   ```json
+   {
+     "success": true,
+     "data": { ... },
+     "error": null
+   }
+
+
+示例：
+
+获取通知列表：
+GET /api/notifications?page=1&limit=10
+返回：
+
+{
+  "success": true,
+  "data": [
+    { "id": "notif1", "type": "price_alert", "title": "价格提醒", "message": "商品A价格低于100元", "read": false, "createdAt": "2025-10-30T10:00:00Z" }
+  ]
+}
+
+
+创建价格提醒：
+POST /api/alerts
+请求体：
+
+{
+  "userId": "user1",
+  "productId": "prod1",
+  "thresholdPrice": 100,
+  "alertType": "below"
+}
+
+
+返回：
+
+{
+  "success": true,
+  "data": { "alertId": "alert123" }
+}
+
+
+---
+
+**特点说明**：
+
+- 数据真实存储于 PostgreSQL，避免硬编码  
+- WebSocket 推送保证实时通知  
+- 支持价格提醒、套利机会提醒、系统消息  
+- 分页、过滤、排序、速率限制确保性能和安全  
+

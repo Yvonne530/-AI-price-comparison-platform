@@ -1,3 +1,6 @@
 {
-  "/page": "app/page.js"
+  "/favorites/page": "app/favorites/page.js",
+  "/notifications/page": "app/notifications/page.js",
+  "/page": "app/page.js",
+  "/arbitrage/page": "app/arbitrage/page.js"
 }

@@ -1,4 +1,4 @@
-// File: /Users/mac-guest1/Downloads/Git/mvp_projects/mvp_3/app/page.tsx
+// File: D:\-AI-price-comparison-platform\app\page.tsx
 import * as entry from '../../../app/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 
