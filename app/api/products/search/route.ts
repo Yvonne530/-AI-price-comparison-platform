@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { prisma } from '@/lib/prisma';
 import { successResponse, errorResponse, handleApiError } from '@/lib/api-response';
 
 const searchParamsSchema = z.object({
@@ -20,87 +19,59 @@ export async function GET(request: Request) {
     const params = searchParamsSchema.parse(Object.fromEntries(searchParams));
     const userId = request.headers.get('X-User-Id');
 
-    const skip = (params.page - 1) * params.limit;
+    // 构建查询参数
+    const filters: any = {};
+    if (params.category) filters.category = params.category;
+    if (params.brand) filters.brand = params.brand;
+    if (params.minPrice) filters.minPrice = params.minPrice;
+    if (params.maxPrice) filters.maxPrice = params.maxPrice;
+    if (params.platform) filters.platform = params.platform;
 
-    // 构建查询条件
-    const where = {
-      OR: [
-        { name: { contains: params.q, mode: 'insensitive' } },
-        { description: { contains: params.q, mode: 'insensitive' } },
-      ],
-      ...(params.category && { category: params.category }),
-      ...(params.brand && { brand: params.brand }),
-      prices: {
-        some: {
-          AND: [
-            ...(params.minPrice ? [{ price: { gte: params.minPrice } }] : []),
-            ...(params.maxPrice ? [{ price: { lte: params.maxPrice } }] : []),
-            ...(params.platform ? [{ platform: params.platform }] : []),
-          ],
-        },
+    // 调用 Express 服务器 API
+    const apiUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3103'}/api/search`;
+    
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
-    };
+      body: JSON.stringify({
+        searchTerm: params.q,
+        filters,
+        userId
+      })
+    });
 
-    // 获取产品列表
-    const [products, total] = await Promise.all([
-      prisma.product.findMany({
-        where,
-        include: {
-          prices: {
-            orderBy: { price: 'asc' },
-            take: 1,
-          },
-          _count: {
-            select: { favoriteUsers: true },
-          },
-        },
-        orderBy: params.sort === 'newest'
-          ? { createdAt: 'desc' }
-          : undefined,
-        skip,
-        take: params.limit,
-      }),
-      prisma.product.count({ where }),
-    ]);
-
-    // 如果用户已登录，记录搜索历史
-    if (userId) {
-      await prisma.search.create({
-        data: {
-          userId,
-          query: params.q,
-          filters: {
-            category: params.category,
-            brand: params.brand,
-            minPrice: params.minPrice,
-            maxPrice: params.maxPrice,
-            platform: params.platform,
-            sort: params.sort,
-          },
-        },
-      });
+    if (!response.ok) {
+      throw new Error(`API request failed with status ${response.status}`);
     }
 
-    // 格式化响应数据
-    const formattedProducts = products.map(product => ({
+    const data = await response.json();
+
+    if (!data.success) {
+      throw new Error(data.error || '搜索请求失败');
+    }
+
+    // 格式化响应数据以匹配前端期望的格式
+    const formattedProducts = data.data.results.map((product: any) => ({
       id: product.id,
       name: product.name,
       description: product.description,
       image: product.image,
       category: product.category,
       brand: product.brand,
-      model: product.model,
-      bestPrice: product.prices[0]?.price,
-      currency: product.prices[0]?.currency,
-      platform: product.prices[0]?.platform,
-      favoritesCount: product._count.favoriteUsers,
+      model: '',
+      bestPrice: product.price,
+      currency: product.currency,
+      platform: product.retailer,
+      favoritesCount: 0,
     }));
 
     return successResponse({
       products: formattedProducts,
-      total,
-      page: params.page,
-      totalPages: Math.ceil(total / params.limit),
+      total: data.data.count,
+      page: 1,
+      totalPages: 1,
     });
   } catch (error) {
     return handleApiError(error);

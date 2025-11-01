@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import {
   Search,
   Globe,
@@ -1164,6 +1164,40 @@ export default function GlobalPriceFinder() {
   const [user, setUser] = useState<any | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [searchResults, setSearchResults] = useState<Product[]>([])
+  const [popularSearches, setPopularSearches] = useState<string[]>([])
+
+  // 获取热门搜索词
+  useEffect(() => {
+    let isMounted = true; // 添加标志来跟踪组件是否已挂载
+
+    const fetchPopularSearches = async () => {
+      try {
+        // 使用 Express 服务器 API 获取热门搜索词
+        const apiUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3103'}/api/popular-searches`;
+        const response = await fetch(apiUrl);
+        
+        if (isMounted && response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setPopularSearches(data.data);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch popular searches:", error);
+        // 如果 API 调用失败，使用默认的热门搜索词
+        if (isMounted) {
+          setPopularSearches(["iPhone 15", "MacBook Air", "AirPods Pro", "iPad Pro", "Nintendo Switch", "Dyson V15"]);
+        }
+      }
+    };
+
+    fetchPopularSearches();
+
+    // 清理函数，组件卸载时设置 isMounted 为 false
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // 实时价格计算引擎 (升级版)
   const calculateFinalPrice = (product: any, platformId: string, country: string) => {
@@ -1202,30 +1236,30 @@ export default function GlobalPriceFinder() {
   // 搜索过滤
   const performSearch = async (query: string) => {
     if (!query.trim()) {
-      setSearchResults([])
-      return
+      setSearchResults([]);
+      return;
     }
 
-    setIsLoading(true)
+    setIsLoading(true);
     try {
-      const result = await searchProducts(query)
-      setSearchResults(result.results)
+      const result = await searchProducts(query);
+      setSearchResults(result.results);
     } catch (error) {
-      console.error("Search failed:", error)
-      setSearchResults([])
+      console.error("Search failed:", error);
+      setSearchResults([]);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }
 
   // 监听搜索查询变化
-  useMemo(() => {
+  useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
-      performSearch(searchQuery)
-    }, 500)
+      performSearch(searchQuery);
+    }, 500);
 
-    return () => clearTimeout(delayDebounceFn)
-  }, [searchQuery])
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchQuery]);
 
   const availableCountries = Object.keys(countryPlatforms)
 
@@ -1284,7 +1318,8 @@ export default function GlobalPriceFinder() {
                 在上方搜索框中输入您想要比价的商品名称，我们将为您搜索全球最优价格
               </p>
               <div className="flex flex-wrap justify-center gap-3">
-                {["iPhone 15", "MacBook Air", "AirPods Pro", "iPad Pro", "Nintendo Switch", "Dyson V15"].map((term) => (
+                {/* 使用从 API 获取的热门搜索词或默认值 */}
+                {popularSearches.map((term) => (
                   <Button key={term} variant="outline" onClick={() => setSearchQuery(term)} className="text-sm">
                     {term}
                   </Button>
